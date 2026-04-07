@@ -1,3 +1,4 @@
 scripts/wikiALL_files/*
+scripts/itemALL_files/*
+scripts/itemALL.html
 scripts/wikiALL.html
-*.csv

@@ -8,54 +8,57 @@ html_path = os.path.join(base_dir, "wikiALL.html")
 output_path = os.path.normpath(os.path.join(base_dir, "..", "craft_data.csv"))
 
 def run_convert():
-    if not os.path.exists(html_path): return
+    if not os.path.exists(html_path):
+        print(f"❌ エラー: {html_path} が見つかりません")
+        return
+
+    print(f"🔍 読み込み中: {html_path}")
 
     with open(html_path, encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
 
     rows = []
     seen = set()
-    
-    # Wiki本文エリアを狙い撃ち
-    content = soup.find(id="wikibody") or soup.find(class_="atwiki_body") or soup
+    content = soup.find(id="wikibody") or soup.find(id="main") or soup.find(class_="atwiki_body") or soup
     tables = content.find_all("table")
 
-    # 1列目にこれらが含まれていたら「クラフト用テーブル」と認定するリスト
-    target_keywords = ["アイテム", "名称", "装備", "パーツ", "チップ", "作成"]
+    target_keywords = ["アイテム", "名称", "装備", "パーツ", "チップ", "作成", "材料"]
 
     for table in tables:
         all_tr = table.find_all("tr")
         if not all_tr: continue
 
-        # --- 1. ヘッダー行の特定と列インデックスの把握 ---
+        # --- 1. カテゴリとレアリティ判定 ---
+        table_category = "クレイドルパーツ" # デフォルト
+        table_default_rarity = ""
+        prev_node = table.find_previous(["h2", "h3", "h4"])
+        if prev_node:
+            htxt = prev_node.get_text()
+            if "素材" in htxt: table_category = "素材"
+            elif any(x in htxt for x in ["消費", "アイテム"]): table_category = "消費アイテム"
+            elif any(x in htxt for x in ["装備", "パーツ", "武器"]): table_category = "装備品"
+            elif "チップ" in htxt: table_category = "チップ"
+            elif "掘削機" in htxt: table_category = "掘削機"
+            if "武器" in htxt: table_category = "武器" # 武器キーワードを優先
+            
+            for r_jp, r_en in [("レジェンダリー", "legendary"), ("エピック", "epic"), ("レア", "rare"), ("アンコモン", "uncommon"), ("コモン", "common")]:
+                if r_jp in htxt:
+                    table_default_rarity = r_en
+                    break
+
+        # --- 2. ヘッダー特定 ---
         header_row = None
-        target_col_idx = -1 # 「アイテム名」が何列目にあるか
-        
         for tr in all_tr:
             cells = tr.find_all(["th", "td"])
             if not cells: continue
-            
-            first_text = cells[0].get_text(strip=True)
-            if any(kw in first_text for kw in target_keywords):
+            txt = cells[0].get_text(strip=True)
+            if any(kw in txt for kw in target_keywords):
                 header_row = tr
-                target_col_idx = 0 # 1列目をターゲットに固定
                 break
         
-        if target_col_idx == -1: continue # ターゲット外のテーブル
+        if not header_row: continue
 
-        # --- 2. レアリティ判定 (テーブル直前の見出し) ---
-        table_rarity = ""
-        prev = table.find_previous(["h2", "h3", "h4"])
-        if prev:
-            t = prev.get_text()
-            if "レジェンダリー" in t: table_rarity = "legendary"
-            elif "エピック" in t: table_rarity = "epic"
-            elif "レア" in t: table_rarity = "rare"
-            elif "アンコモン" in t: table_rarity = "uncommon"
-            elif "コモン" in t: table_rarity = "common"
-
-        # --- 3. データ行のパース ---
-        # ヘッダー以降の行をループ
+        # --- 3. データ行の抽出 ---
         found_header = False
         for tr in all_tr:
             if tr == header_row:
@@ -66,48 +69,38 @@ def run_convert():
             cells = tr.find_all(["td", "th"])
             if len(cells) < 2: continue
 
-            # テキスト化とクレンジング
+            # セル内のテキストを取得
             texts = [c.get_text("\n", strip=True).replace("×", "x").replace("　", " ") for c in cells]
-
             
-
-            # ターゲットアイテム名（不要な記号を削除）
-            target_item = re.sub(r'^[+\s・]+', '', texts[target_col_idx]).strip()
-            if not target_item or any(kw in target_item for kw in target_keywords):
+            # --- 【修正ポイント】ターゲット名のクレンジング ---
+            # 改行を削除（または半角スペースに置換）して1行にする
+            target_item_raw = texts[0]
+            target_item = re.sub(r'^[+\s・]+', '', target_item_raw).strip()
+            target_item = target_item.replace("\n", " ").replace("\r", "") # 改行を消してスペース1つに
+            
+            if not target_item or any(target_item == kw for kw in target_keywords):
                 continue
 
-            # レアリティの行内判定（ユーザー指定の正規表現）
-            row_rarity = table_rarity
-            for t in texts:
-                if re.search(r'\b(legendary|レジェンダリー)\b', t, re.IGNORECASE):
-                    row_rarity = "legendary"; break
-                elif re.search(r'\b(epic|エピック)\b', t, re.IGNORECASE):
-                    row_rarity = "epic"; break
-                elif re.search(r'\b(uncommon|アンコモン)\b', t, re.IGNORECASE):
-                    row_rarity = "uncommon"; break
-                elif re.search(r'\b(common|コモン)\b', t, re.IGNORECASE):
-                    row_rarity = "common"; break
-                elif re.search(r'\b(rare|レア)\b', t, re.IGNORECASE) and "レア度" not in t:
-                    if not any(x in t for x in ["メタル", "アース", "素材", "チップ"]):
-                        row_rarity = "rare"; break
+            # レアリティ判定
+            row_rarity = table_default_rarity
+            full_line_text = " ".join(texts)
+            for r_jp, r_en in [("レジェンダリー", "legendary"), ("エピック", "epic"), ("アンコモン", "uncommon"), ("コモン", "common"), ("レア", "rare")]:
+                if r_jp in full_line_text:
+                    if r_jp == "レア" and any(x in full_line_text for x in ["素材", "メタル", "チップ"]): continue
+                    row_rarity = r_en
+                    break
 
-            # 素材の抽出 (アイテム名列以外をすべてチェック)
+            # 素材抽出
             for i, cell_content in enumerate(texts):
-                # print(f"log-cell_content0: {cell_content}")
-
-                if i == target_col_idx: continue # 自分自身は飛ばす
-                # if "マネー" in cell_content: continue
-
-                print(f"log-cell_content: {cell_content}")
-
-                parts = re.split(r'[\n/、,]', cell_content)
+                if i == 0: continue 
+                
+                parts = re.split(r'[\n,、/]', cell_content)
                 for part in parts:
-                    # 素材名 x 数量
                     m = re.search(r'(.+?)\s*[xX]\s*(\d+)', part.strip())
                     if m:
                         mat_name = m.group(1).strip()
                         qty = int(m.group(2))
-                        if len(mat_name) < 2: continue
+                        if len(mat_name) < 2 or mat_name == "材料": continue
 
                         key = (mat_name, target_item, qty)
                         if key not in seen:
@@ -115,16 +108,19 @@ def run_convert():
                             rows.append({
                                 "material": mat_name,
                                 "target": target_item,
-                                "machine": "",
-                                "rarity": row_rarity,
-                                "qty": qty
+                                "machine": "", 
+                                "rarity": row_rarity or "common",
+                                "qty": qty,
+                                "category": table_category
                             })
 
     if rows:
-        pd.DataFrame(rows).to_csv(output_path, index=False, encoding="utf-8-sig")
-        print(f"✅ 完了: {len(rows)} 件を {output_path} に出力")
+        df = pd.DataFrame(rows)
+        df = df[["material", "target", "machine", "rarity", "qty", "category"]]
+        df.to_csv(output_path, index=False, encoding="utf-8-sig")
+        print(f"✅ 成功: {len(df)} 件を {output_path} に出力")
     else:
-        print("⚠ 抽出できませんでした。")
+        print("⚠ 抽出可能なデータが見つかりませんでした。")
 
 if __name__ == "__main__":
     run_convert()
