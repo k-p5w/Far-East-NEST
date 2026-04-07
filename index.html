@@ -3,80 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYNDUALITY 素材逆引き事典 (CSV連動版)</title>
+    <title>SYNDUALITY 素材逆引き & 構成展開</title>
     <style>
-        :root { --legendary: #ffcc00; --epic: #a335ee; --rare: #0070dd; --bg: #0f0f0f; --card-bg: #1e1e1e; }
+        :root { --legendary: #ffcc00; --epic: #a335ee; --rare: #0070dd; --uncommon: #1eff00; --common: #ffffff; --bg: #0f0f0f; --card-bg: #1e1e1e; }
         body { font-family: sans-serif; background: var(--bg); color: #ddd; padding: 15px; margin: 0; }
         .search-box { width: 100%; padding: 18px; font-size: 16px; border-radius: 12px; border: 2px solid #444; margin-bottom: 20px; box-sizing: border-box; background: #222; color: #fff; position: sticky; top: 10px; z-index: 100; }
         .card { background: var(--card-bg); border-radius: 8px; margin-bottom: 12px; display: none; border: 1px solid #333; }
         .card.show { display: block; }
-        .card-header { background: #2a2a2a; padding: 12px 15px; border-bottom: 1px solid #333; }
+        .card-header { background: #2a2a2a; padding: 12px 15px; border-bottom: 1px solid #333; cursor: pointer; }
         .material-name { color: #fff; font-weight: bold; font-size: 18px; }
         .usage-list { padding: 10px 15px; }
         .usage-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
-        .rarity-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 10px; border: 1px solid transparent; min-width: 75px; text-align: center; }
+        .rarity-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 10px; border: 1px solid transparent; min-width: 75px; text-align: center; text-transform: uppercase; }
         .legendary { color: var(--legendary); border-color: var(--legendary); }
         .epic { color: var(--epic); border-color: var(--epic); }
         .rare { color: var(--rare); border-color: var(--rare); }
+        .uncommon { color: var(--uncommon); border-color: var(--uncommon); }
+        .common { color: var(--common); border-color: var(--common); }
         .part-info { flex-grow: 1; }
-        .target-name { font-size: 14px; font-weight: bold; color: #eee; }
-        .machine-name { font-size: 11px; color: #888; }
+        .target-name { font-size: 14px; font-weight: bold; color: #eee; cursor: pointer; text-decoration: underline; }
         .qty-val { font-size: 18px; font-weight: bold; color: #fff; }
+        
+        /* 展開エリアのスタイル */
+        .recursive-area { background: #111; margin-top: 10px; padding: 10px; border-radius: 4px; font-size: 13px; color: #aaa; display: none; }
+        .recursive-area.active { display: block; }
+        .recursive-item { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dotted #333; }
     </style>
 </head>
 <body>
 
-<input type="text" id="search" class="search-box" placeholder="素材名で検索..." onkeyup="filter()">
+<input type="text" id="search" class="search-box" placeholder="素材名で検索（例: ハーネスフレーム）" onkeyup="filter()">
 <div id="container">読み込み中...</div>
 
 <script>
-let masterData = [];
+let allRecipes = []; // CSVの全行
+let groupedByMaterial = {}; // 素材ごとの逆引きインデックス
 
-// CSVを読み込む関数
 async function loadCSV() {
     try {
         const response = await fetch('./craft_data.csv');
         const text = await response.text();
-        const rows = text.split('\n').slice(1); // ヘッダーを飛ばす
+        const rows = text.split('\n').slice(1);
 
-        const container = document.getElementById('container');
-        container.innerHTML = "";
-        
-        // 素材ごとにデータをまとめる
-        const grouped = {};
         rows.forEach(row => {
             if (!row) return;
-            const [material, target, machine, rarity, qty] = row.split(',');
-            if (!grouped[material]) grouped[material] = [];
-            grouped[material].push({ target, machine, rarity, qty });
+            // material, target, machine, rarity, qty
+            const cols = row.split(',');
+            const data = {
+                material: cols[0].stripQuotes(),
+                target: cols[1].stripQuotes(),
+                machine: cols[2].stripQuotes(),
+                rarity: cols[3].stripQuotes().toLowerCase(),
+                qty: parseInt(cols[4])
+            };
+            allRecipes.push(data);
+
+            if (!groupedByMaterial[data.material]) groupedByMaterial[data.material] = [];
+            groupedByMaterial[data.material].push(data);
         });
 
-        // HTML要素を生成
-        for (const [name, items] of Object.entries(grouped)) {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.setAttribute('data-name', name);
-            
-            let itemsHtml = items.map(item => `
-                <div class="usage-item">
-                    <span class="rarity-tag ${item.rarity}">${item.rarity.toUpperCase()}</span>
-                    <div class="part-info">
-                        <div class="target-name">${item.target}</div>
-                        <div class="machine-name">${item.machine}</div>
-                    </div>
-                    <div class="qty-area"><span class="qty-val">${item.qty}</span></div>
-                </div>
-            `).join('');
-
-            card.innerHTML = `
-                <div class="card-header"><span class="material-name">${name}</span></div>
-                <div class="usage-list">${itemsHtml}</div>
-            `;
-            container.appendChild(card);
-        }
+        render();
     } catch (e) {
         document.getElementById('container').innerText = "CSVの読み込みに失敗しました。";
     }
+}
+
+// 引用符や空白を消す補助
+String.prototype.stripQuotes = function() {
+    return this.replace(/^["'](.+)["']$/, '$1').trim();
+};
+
+// --- 再帰展開ロジック ---
+function calculateTotalMaterials(targetItem, multiplier = 1, totals = {}) {
+    // targetItemを作るためのレシピを探す
+    const ingredients = allRecipes.filter(r => r.target === targetItem);
+
+    if (ingredients.length === 0) {
+        // これ以上分解できない末端素材
+        totals[targetItem] = (totals[targetItem] || 0) + multiplier;
+        return totals;
+    }
+
+    ingredients.forEach(ing => {
+        calculateTotalMaterials(ing.material, ing.qty * multiplier, totals);
+    });
+
+    return totals;
+}
+
+function render() {
+    const container = document.getElementById('container');
+    container.innerHTML = "";
+
+    for (const [name, items] of Object.entries(groupedByMaterial)) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.setAttribute('data-name', name);
+        
+        const itemsHtml = items.map(item => `
+            <div class="usage-item">
+                <span class="rarity-tag ${item.rarity}">${item.rarity}</span>
+                <div class="part-info">
+                    <div class="target-name" onclick="toggleExpand(this, '${item.target}')">${item.target}</div>
+                    <div class="machine-name">${item.machine}</div>
+                    <div class="recursive-area" id="rec-${item.target}-${name}"></div>
+                </div>
+                <div class="qty-area"><span class="qty-val">${item.qty}</span></div>
+            </div>
+        `).join('');
+
+        card.innerHTML = `
+            <div class="card-header"><span class="material-name">${name}</span></div>
+            <div class="usage-list">${itemsHtml}</div>
+        `;
+        container.appendChild(card);
+    }
+}
+
+// クリックで展開する処理
+function toggleExpand(el, targetName) {
+    const area = el.parentElement.querySelector('.recursive-area');
+    if (area.classList.contains('active')) {
+        area.classList.remove('active');
+        return;
+    }
+
+    // 再帰計算を実行
+    const totals = calculateTotalMaterials(targetName, 1);
+    
+    let html = '<strong>必要合計（末端素材）:</strong>';
+    for (const [mName, mQty] of Object.entries(totals)) {
+        html += `<div class="recursive-item"><span>${mName}</span><span>x ${mQty}</span></div>`;
+    }
+    
+    area.innerHTML = html;
+    area.classList.add('active');
 }
 
 function filter() {
@@ -88,6 +149,77 @@ function filter() {
 }
 
 loadCSV();
+
+
+// ... (loadCSVなどは共通) ...
+
+function render() {
+    const container = document.getElementById('container');
+    container.innerHTML = "";
+
+    for (const [name, items] of Object.entries(groupedByMaterial)) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.setAttribute('data-name', name);
+        
+        const itemsHtml = items.map(item => `
+            <div class="usage-item">
+                <span class="rarity-tag ${item.rarity}">${item.rarity}</span>
+                <div class="part-info">
+                    <div class="target-name" onclick="toggleExpand(this, '${item.target}')">${item.target}</div>
+                    <div class="machine-name">${item.machine}</div>
+                    <div class="recursive-area"></div>
+                </div>
+                <div class="qty-area"><span class="qty-val">${item.qty}</span></div>
+            </div>
+        `).join('');
+
+        card.innerHTML = `
+            <div class="card-header" onclick="quickSearch('${name}')">
+                <span class="material-name">${name}</span>
+                <small style="color:#666; font-size:10px; margin-left:10px;">(クリックでこの素材を検索)</small>
+            </div>
+            <div class="usage-list">${itemsHtml}</div>
+        `;
+        container.appendChild(card);
+    }
+}
+
+// クイック検索（素材名をクリックした時）
+function quickSearch(name) {
+    const searchInput = document.getElementById('search');
+    searchInput.value = name;
+    filter();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// クリックで展開する処理（末端素材もクリック可能に修正）
+function toggleExpand(el, targetName) {
+    const area = el.parentElement.querySelector('.recursive-area');
+    if (area.classList.contains('active')) {
+        area.classList.remove('active');
+        return;
+    }
+
+    const totals = calculateTotalMaterials(targetName, 1);
+    
+    let html = '<div style="margin-bottom:5px; border-bottom:1px solid #444; padding-bottom:3px;"><strong>必要合計（末端素材）:</strong></div>';
+    for (const [mName, mQty] of Object.entries(totals)) {
+        // 末端素材をクリックすると、その素材の逆引きにジャンプできるように onclick を付与
+        html += `
+            <div class="recursive-item" onclick="event.stopPropagation(); quickSearch('${mName}')" style="cursor:pointer; hover:background:#222;">
+                <span style="text-decoration:underline;">${mName}</span>
+                <span>x ${mQty}</span>
+            </div>`;
+    }
+    
+    area.innerHTML = html;
+    area.classList.add('active');
+}
+
+// ... (filter関数などは共通) ...
+
+
 </script>
 </body>
 </html>
