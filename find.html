@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNDUALITY 素材逆引き事典 (CSV連動版)</title>
+    <style>
+        :root { --legendary: #ffcc00; --epic: #a335ee; --rare: #0070dd; --bg: #0f0f0f; --card-bg: #1e1e1e; }
+        body { font-family: sans-serif; background: var(--bg); color: #ddd; padding: 15px; margin: 0; }
+        .search-box { width: 100%; padding: 18px; font-size: 16px; border-radius: 12px; border: 2px solid #444; margin-bottom: 20px; box-sizing: border-box; background: #222; color: #fff; position: sticky; top: 10px; z-index: 100; }
+        .card { background: var(--card-bg); border-radius: 8px; margin-bottom: 12px; display: none; border: 1px solid #333; }
+        .card.show { display: block; }
+        .card-header { background: #2a2a2a; padding: 12px 15px; border-bottom: 1px solid #333; }
+        .material-name { color: #fff; font-weight: bold; font-size: 18px; }
+        .usage-list { padding: 10px 15px; }
+        .usage-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
+        .rarity-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 10px; border: 1px solid transparent; min-width: 75px; text-align: center; }
+        .legendary { color: var(--legendary); border-color: var(--legendary); }
+        .epic { color: var(--epic); border-color: var(--epic); }
+        .rare { color: var(--rare); border-color: var(--rare); }
+        .part-info { flex-grow: 1; }
+        .target-name { font-size: 14px; font-weight: bold; color: #eee; }
+        .machine-name { font-size: 11px; color: #888; }
+        .qty-val { font-size: 18px; font-weight: bold; color: #fff; }
+    </style>
+</head>
+<body>
+
+<input type="text" id="search" class="search-box" placeholder="素材名で検索..." onkeyup="filter()">
+<div id="container">読み込み中...</div>
+
+<script>
+let masterData = [];
+
+// CSVを読み込む関数
+async function loadCSV() {
+    try {
+        const response = await fetch('./craft_data.csv');
+        const text = await response.text();
+        const rows = text.split('\n').slice(1); // ヘッダーを飛ばす
+
+        const container = document.getElementById('container');
+        container.innerHTML = "";
+        
+        // 素材ごとにデータをまとめる
+        const grouped = {};
+        rows.forEach(row => {
+            if (!row) return;
+            const [material, target, machine, rarity, qty] = row.split(',');
+            if (!grouped[material]) grouped[material] = [];
+            grouped[material].push({ target, machine, rarity, qty });
+        });
+
+        // HTML要素を生成
+        for (const [name, items] of Object.entries(grouped)) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.setAttribute('data-name', name);
+            
+            let itemsHtml = items.map(item => `
+                <div class="usage-item">
+                    <span class="rarity-tag ${item.rarity}">${item.rarity.toUpperCase()}</span>
+                    <div class="part-info">
+                        <div class="target-name">${item.target}</div>
+                        <div class="machine-name">${item.machine}</div>
+                    </div>
+                    <div class="qty-area"><span class="qty-val">${item.qty}</span></div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="card-header"><span class="material-name">${name}</span></div>
+                <div class="usage-list">${itemsHtml}</div>
+            `;
+            container.appendChild(card);
+        }
+    } catch (e) {
+        document.getElementById('container').innerText = "CSVの読み込みに失敗しました。";
+    }
+}
+
+function filter() {
+    const input = document.getElementById('search').value.toLowerCase();
+    document.querySelectorAll('.card').forEach(card => {
+        const name = card.getAttribute('data-name').toLowerCase();
+        card.classList.toggle('show', input !== "" && name.includes(input));
+    });
+}
+
+loadCSV();
+</script>
+</body>
+</html>
