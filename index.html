@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Far-East-NEST | SYNDUALITY 素材逆引きアプリ</title>
 
-<link rel="shortcut icon" href="favicon.ico">
+    <link rel="shortcut icon" href="favicon.ico">
 
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-V6BSN44CQV"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
         gtag('config', 'G-V6BSN44CQV');
     </script>
@@ -271,12 +271,71 @@
             display: block;
         }
 
+
         .recursive-item {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
+            padding: 8px 10px;
+            /* 左右に少し余裕を持たせる */
             border-bottom: 1px solid #1a1a1a;
             font-size: 14px;
+
+            /* --- ここから追加 --- */
+            cursor: pointer;
+            /* マウスを乗せたら指マークにする */
+            transition: background 0.2s;
+            /* 変化をなめらかに */
+            border-radius: 4px;
+            /* 角を少し丸める */
+        }
+
+        .recursive-item:hover {
+            background: rgba(0, 255, 204, 0.15);
+            /* アクセントカラーで薄く光らせる */
+            color: #fff;
+            /* 文字をパキッと白くする */
+        }
+
+        .recursive-item span:first-child {
+            border-bottom: 1px dashed #555;
+            /* 下線を破線にして「リンク感」を出す */
+        }
+
+
+
+        /* 分解表示ボタンのスタイル */
+        .expand-button {
+            font-size: 11px;
+            color: #00ffcc;
+            /* アクセントカラー（エメラルド） */
+            cursor: pointer;
+            margin-top: 6px;
+            display: inline-block;
+            border: 1px solid #00ffcc;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: 0.2s;
+            background: rgba(0, 255, 204, 0.1);
+        }
+
+        .expand-button:hover {
+            background: rgba(0, 255, 204, 0.3);
+            color: #fff;
+        }
+
+        /* 検索対象（完成品名）のスタイル */
+        .target-name {
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-color: #555;
+            transition: 0.2s;
+        }
+
+        .target-name:hover {
+            color: #00ffcc;
+            text-decoration-color: #00ffcc;
         }
     </style>
 </head>
@@ -289,29 +348,33 @@
     </div>
 
     <div id="container"></div>
-
     <script>
-        let allRecipes = [];
-        let itemMaster = {};
-        let groupedByMaterial = {};
+        // --- グローバル変数 ---
+        let allRecipes = [];          // 全レシピのフラットなリスト
+        let itemMaster = {};          // アイテムの基本情報（レア度、場所など）
+        let groupedByMaterial = {};    // 「素材名」をキーにした逆引き用辞書
 
-        // CSVの読み込みとパース
+        /**
+         * アプリの初期化：CSVを読み込んでデータを構造化する
+         */
         async function init() {
             try {
+                // マスターデータとレシピデータを同時に取得
                 const [mRes, rRes] = await Promise.all([
                     fetch('./item_master.csv'),
                     fetch('./craft_data.csv')
                 ]);
 
+                // アイテムマスターのパース
                 const mData = parseCSV(await mRes.text());
                 mData.slice(1).forEach(row => {
                     if (row[0]) {
-                        // レアリティの空白や大文字小文字をJS側でも再度正規化
                         const rar = row[1] ? row[1].toLowerCase().trim().replace(/\s+/g, '') : 'common';
                         itemMaster[row[0]] = { rarity: rar, category: row[2], location: row[3], buy: row[4], sell: row[5], note: row[6] };
                     }
                 });
 
+                // レシピデータのパース
                 const rData = parseCSV(await rRes.text());
                 rData.slice(1).forEach(row => {
                     if (!row[0]) return;
@@ -322,13 +385,17 @@
                         qty: parseInt(row[4]) || 0
                     };
                     allRecipes.push(data);
+                    // 逆引き検索を高速化するために、素材名でグループ化しておく
                     if (!groupedByMaterial[data.material]) groupedByMaterial[data.material] = [];
                     groupedByMaterial[data.material].push(data);
                 });
-                render();
+                render(); // 最初の描画を実行
             } catch (e) { console.error("Data loading error:", e); }
         }
 
+        /**
+         * シンプルなCSVパース関数（引用符に対応）
+         */
         function parseCSV(text) {
             const rows = [];
             let curRow = [], curCell = '', inQuote = false;
@@ -344,10 +411,14 @@
             return rows;
         }
 
+        /**
+         * メインの描画処理：素材ごとのカードを生成する
+         */
         function render() {
             const container = document.getElementById('container');
             container.innerHTML = "";
 
+            // 素材名でソートしてループ
             Object.keys(groupedByMaterial).sort().forEach(name => {
                 const items = groupedByMaterial[name];
                 const m = itemMaster[name] || {};
@@ -366,16 +437,26 @@
                     ${m.buy && m.buy !== "-" ? `<span class="price-tag buy-price">購入: ${m.buy}</span>` : ""}
                     ${m.sell && m.sell !== "-" ? `<span class="price-tag sell-price">売却: ${m.sell}</span>` : ""}
                 </div>
-                ${m.location ? `<div class="header-location">📍 入手先: <b>${m.location}</b></div>` : ""}
+                ${m.location ? `<div class="header-location">📍 入手方法: <b>${m.location}</b></div>` : ""}
                 ${m.note ? `<div class="header-note">${m.note}</div>` : ""}
             </div>
             <div class="usage-list">
                 <div class="usage-title">この素材から作れるアイテム（逆引き）</div>
-                ${items.map(item => `
+                    ${items.map(item => `
                     <div class="usage-item">
                         <span class="rarity-tag ${item.rarity}">${item.rarity.toUpperCase()}</span>
                         <div style="flex-grow:1">
-                            <div class="target-name" onclick="toggleExpand(this, '${item.target.replace(/'/g, "\\'")}')">${item.target}</div>
+                            <div class="target-name" 
+                                 onclick="quickSearch('${item.target.replace(/'/g, "\\'")}')" 
+                                 title="このアイテムを材料として使うレシピを検索">
+                                 ${item.target}
+                            </div>
+                            
+                            <div class="expand-button" 
+                                 onclick="toggleExpand(this, '${item.target.replace(/'/g, "\\'")}')">
+                                 ▼ その他素材の詳細表示 ▼
+                            </div>
+                            
                             <div class="recursive-area"></div>
                         </div>
                         <div class="qty-area"><div class="qty-val">${item.qty}</div></div>
@@ -387,13 +468,19 @@
             });
         }
 
+        /**
+         * アコーディオン展開：完成品を末端素材まで再帰的に計算して表示する
+         */
         function toggleExpand(el, target) {
             const area = el.parentElement.querySelector('.recursive-area');
             if (area.classList.toggle('active')) {
                 const totals = {};
+                // 再帰計算用関数
                 const calc = (t, m) => {
                     const ings = allRecipes.filter(r => r.target === t);
+                    // レシピがない＝これ以上分解できない末端素材
                     if (!ings.length) return totals[t] = (totals[t] || 0) + m;
+                    // 材料をさらに掘り下げる
                     ings.forEach(i => calc(i.material, i.qty * m));
                 };
                 calc(target, 1);
@@ -405,18 +492,73 @@
             }
         }
 
-        function quickSearch(n) { document.getElementById('search').value = n; filter(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-
-        function filter() {
-            const v = document.getElementById('search').value.toLowerCase();
-            document.querySelectorAll('.card').forEach(c => {
-                const name = c.getAttribute('data-name').toLowerCase();
-                c.classList.toggle('show', v !== "" && name.includes(v));
-            });
+        /**
+         * クイック検索：指定した単語を検索窓に入れてフィルタリングを実行
+         */
+        function quickSearch(n) {
+            const searchInput = document.getElementById('search');
+            searchInput.value = n;
+            filter();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        /**
+         * フィルタリング：入力された文字が含まれるカードのみを表示
+         */
+        /**
+                 * フィルタリングとソーティング：
+                 * 完全一致 ＞ 前方一致 ＞ 部分一致 の順で並び替えて表示する
+                 */
+        function filter() {
+            const query = document.getElementById('search').value.toLowerCase().trim();
+            const container = document.getElementById('container');
+            const cards = Array.from(document.querySelectorAll('.card'));
+
+            if (query === "") {
+                cards.forEach(c => c.classList.remove('show'));
+                return;
+            }
+
+            // 各カードに「一致スコア」を付けて判定
+            const results = cards.map(card => {
+                const name = card.getAttribute('data-name').toLowerCase();
+                let score = 0;
+
+                if (name === query) {
+                    score = 3; // 完全一致
+                } else if (name.startsWith(query)) {
+                    score = 2; // 前方一致
+                } else if (name.includes(query)) {
+                    score = 1; // 部分一致（含まれる）
+                }
+
+                return { card, score };
+            });
+
+            // スコアがあるものだけを表示し、スコア順 ＞ 名前順 で並び替える
+            results
+                .filter(res => res.score > 0)
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score; // スコアが高い順
+                    return a.card.getAttribute('data-name').localeCompare(b.card.getAttribute('data-name')); // 同じスコアなら名前順
+                })
+                .forEach(res => {
+                    res.card.classList.add('show');
+                    container.appendChild(res.card); // DOM上の順番を入れ替える
+                });
+
+            // スコアが0のものは隠す
+            results.filter(res => res.score === 0).forEach(res => res.card.classList.remove('show'));
+        }
+
+        // アプリ起動
         init();
     </script>
+
+    <footer style="text-align:center; padding:20px 0; color:#555; font-size:12px;">
+        <div>© 2026 Far-East-NEST | データ提供: SYNDUALITY 素材逆引きアプリ</div>
+        <div style="margin-top:5px;">このサイトは非公式のファンサイトです。ゲームとは一切関係ありません。</div>
+    </footer>
 </body>
 
 </html>
