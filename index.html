@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SYNDUALITYの素材逆引きアプリです。アイテムのレシピを検索できます。"> 
+    <meta name="description" content="SYNDUALITYの素材逆引きアプリです。アイテムのレシピを検索できます。">
     <title>Far-East-NEST | SYNDUALITY 素材逆引きアプリ</title>
 
     <link rel="shortcut icon" href="favicon.ico">
@@ -23,8 +23,11 @@
 <body>
 
     <div class="search-container">
-        <input type="text" id="search" class="search-box" placeholder="逆引きしたいアイテム名を入力(e.g.マローダーコア)..."
-            oninput="filter()" onblur="filter()">
+        <input type="text" id="search" class="search-box" placeholder="逆引きしたいアイテム名を入力/マローダーコア..." onkeyup="filter()">
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="deep-scan" style="cursor: pointer;">
+            <label for="deep-scan" style="cursor: pointer;">末端素材まで分解して合計を表示</label>
+        </div>
     </div>
 
     <div id="container"></div>
@@ -32,9 +35,13 @@
     <script src="script.js"></script>
 
     <footer style="text-align:center; padding:20px 0; color:#555; font-size:12px;">
-        <div>© 2026 Far-East-NEST | データ提供: 極東ネスト. SYNDUALITY 素材逆引きアプリ</div>
-        <div style="margin-top:5px;">このサイトは非公式のファンサイトです。ゲームとは一切関係ありません。</div>
-        <div style="margin-top:5px;">データは非公式wikiを参考にしています。</div>
+        <div>© 2026 Far-East-NEST | SYNDUALITY 素材逆引きツール</div>
+        <div style="margin-top:5px;">
+            本サイトは非公式のファンコンテンツであり、ゲーム公式とは関係ありません。
+        </div>
+        <div style="margin-top:5px;">
+            データは有志による非公式Wiki等を参考にしています。
+        </div>
     </footer>
 </body>
 

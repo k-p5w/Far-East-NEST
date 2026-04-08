@@ -147,22 +147,38 @@ function render() {
  */
 function toggleExpand(el, target) {
     const area = el.parentElement.querySelector('.recursive-area');
+    const isDeepScan = document.getElementById('deep-scan').checked;
+
     if (area.classList.toggle('active')) {
-        const totals = {};
-        // 再帰計算用関数
-        const calc = (t, m) => {
-            const ings = allRecipes.filter(r => r.target === t);
-            // レシピがない＝これ以上分解できない末端素材
-            if (!ings.length) return totals[t] = (totals[t] || 0) + m;
-            // 材料をさらに掘り下げる
-            ings.forEach(i => calc(i.material, i.qty * m));
-        };
-        calc(target, 1);
-        area.innerHTML = '<div style="font-size:10px; color:#555; margin-bottom:8px;">末端素材への分解合計</div>' +
-            Object.entries(totals).map(([m, q]) => `
-        <div class="recursive-item" onclick="event.stopPropagation(); quickSearch('${m.replace(/'/g, "\\'")}')">
-            <span style="border-bottom:1px solid #555;">${m}</span><span style="font-weight:bold; color:var(--accent);">x${q}</span>
-        </div>`).join('');
+        if (isDeepScan) {
+            // --- 末端まで全部展開するモード ---
+            const totals = {};
+            const calc = (t, m) => {
+                const ings = allRecipes.filter(r => r.target === t);
+                if (!ings.length) return totals[t] = (totals[t] || 0) + m;
+                ings.forEach(i => calc(i.material, i.qty * m));
+            };
+            calc(target, 1);
+            
+            area.innerHTML = '<div style="font-size:10px; color:var(--accent); margin-bottom:8px;">【再帰計算】末端素材の合計</div>' +
+                Object.entries(totals).map(([m, q]) => `
+                <div class="recursive-item" onclick="event.stopPropagation(); quickSearch('${m.replace(/'/g, "\\'")}')">
+                    <span>${m}</span><span style="font-weight:bold; color:var(--accent);">x${q}</span>
+                </div>`).join('');
+        } else {
+            // --- 1階層だけ表示するモード（デフォルト） ---
+            const ingredients = allRecipes.filter(r => r.target === target);
+            if (!ingredients.length) {
+                area.innerHTML = '<div style="font-size:10px; color:#555;">※ 分解レシピがありません</div>';
+                return;
+            }
+            
+            area.innerHTML = '<div style="font-size:10px; color:#555; margin-bottom:8px;">必要な構成材料</div>' +
+                ingredients.map(i => `
+                <div class="recursive-item" onclick="event.stopPropagation(); quickSearch('${i.material.replace(/'/g, "\\'")}')">
+                    <span>${i.material}</span><span style="font-weight:bold; color:var(--accent);">x${i.qty}</span>
+                </div>`).join('');
+        }
     }
 }
 
