@@ -1,0 +1,320 @@
+:root {
+    --legendary: #ffcc00;
+    --epic: #a335ee;
+    --rare: #0070dd;
+    --uncommon: #1eff00;
+    --common: #ffffff;
+    --bg: #0b0b0b;
+    --card-bg: #1a1a1a;
+    --accent: #00ffcc;
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+    background: var(--bg);
+    color: #ddd;
+    padding: 15px;
+    margin: 0;
+}
+
+/* 検索エリア */
+.search-container {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 10px 0 20px;
+    z-index: 1000;
+}
+
+.search-box {
+    width: 100%;
+    padding: 18px;
+    font-size: 16px;
+    border-radius: 4px;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    background: #222;
+    color: #fff;
+    border-left: 4px solid var(--accent);
+    outline: none;
+}
+
+/* カードデザイン */
+.card {
+    background: var(--card-bg);
+    border-radius: 4px;
+    margin-bottom: 25px;
+    display: none;
+    overflow: hidden;
+    border: 1px solid #333;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.card.show {
+    display: block;
+}
+
+.card-header {
+    padding: 20px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.card-header:hover {
+    background: #252525;
+}
+
+/* レア度ラベル（背景塗りつぶし） */
+.rarity-label {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 900;
+    border-radius: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bg-legendary {
+    background: var(--legendary);
+    color: #000;
+}
+
+.bg-epic {
+    background: var(--epic);
+    color: #fff;
+}
+
+.bg-rare {
+    background: var(--rare);
+    color: #fff;
+}
+
+.bg-uncommon {
+    background: var(--uncommon);
+    color: #000;
+}
+
+.bg-common {
+    background: #555;
+    color: #fff;
+}
+
+.header-material-name {
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.2;
+}
+
+.header-info {
+    font-size: 12px;
+    color: #888;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.price-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: #000;
+    font-family: monospace;
+    border: 1px solid #444;
+}
+
+.buy-price {
+    color: var(--accent);
+}
+
+.sell-price {
+    color: #ffcc00;
+}
+
+.header-location {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: 10px;
+}
+
+.header-location b {
+    color: var(--uncommon);
+}
+
+.header-note {
+    font-size: 12px;
+    color: #777;
+    background: #111;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 15px;
+    border-left: 2px solid #333;
+}
+
+/* リスト部分 */
+.usage-list {
+    padding: 0 20px 20px;
+    background: #151515;
+}
+
+.usage-title {
+    font-size: 10px;
+    color: #555;
+    padding: 15px 0 10px;
+    border-bottom: 1px solid #222;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.usage-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #222;
+    gap: 15px;
+}
+
+.rarity-tag {
+    font-size: 10px;
+    padding: 3px 0;
+    font-weight: bold;
+    border: 1px solid;
+    width: 80px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.rarity-tag.legendary {
+    color: var(--legendary);
+    border-color: var(--legendary);
+}
+
+.rarity-tag.epic {
+    color: var(--epic);
+    border-color: var(--epic);
+}
+
+.rarity-tag.rare {
+    color: var(--rare);
+    border-color: var(--rare);
+}
+
+.rarity-tag.uncommon {
+    color: var(--uncommon);
+    border-color: var(--uncommon);
+}
+
+.rarity-tag.common {
+    color: #888;
+    border-color: #444;
+}
+
+.target-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #eee;
+    cursor: pointer;
+    border-bottom: 1px solid #444;
+    transition: color 0.2s;
+}
+
+.target-name:hover {
+    color: var(--accent);
+}
+
+.qty-area {
+    margin-left: auto;
+    text-align: right;
+}
+
+.qty-val {
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    font-family: 'Arial Black', sans-serif;
+}
+
+.recursive-area {
+    background: #0a0a0a;
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 4px;
+    display: none;
+    border: 1px solid #222;
+}
+
+.recursive-area.active {
+    display: block;
+}
+
+
+.recursive-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px;
+    /* 左右に少し余裕を持たせる */
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 14px;
+
+    /* --- ここから追加 --- */
+    cursor: pointer;
+    /* マウスを乗せたら指マークにする */
+    transition: background 0.2s;
+    /* 変化をなめらかに */
+    border-radius: 4px;
+    /* 角を少し丸める */
+}
+
+.recursive-item:hover {
+    background: rgba(0, 255, 204, 0.15);
+    /* アクセントカラーで薄く光らせる */
+    color: #fff;
+    /* 文字をパキッと白くする */
+}
+
+.recursive-item span:first-child {
+    border-bottom: 1px dashed #555;
+    /* 下線を破線にして「リンク感」を出す */
+}
+
+
+
+/* 分解表示ボタンのスタイル */
+.expand-button {
+    font-size: 11px;
+    color: #00ffcc;
+    /* アクセントカラー（エメラルド） */
+    cursor: pointer;
+    margin-top: 6px;
+    display: inline-block;
+    border: 1px solid #00ffcc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: 0.2s;
+    background: rgba(0, 255, 204, 0.1);
+}
+
+.expand-button:hover {
+    background: rgba(0, 255, 204, 0.3);
+    color: #fff;
+}
+
+/* 検索対象（完成品名）のスタイル */
+.target-name {
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: #555;
+    transition: 0.2s;
+}
+
+.target-name:hover {
+    color: #00ffcc;
+    text-decoration-color: #00ffcc;
+}
