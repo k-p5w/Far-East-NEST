@@ -318,3 +318,44 @@ body {
     color: #00ffcc;
     text-decoration-color: #00ffcc;
 }
+
+
+.stylish-footer {
+    text-align: center;
+    padding: 60px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    margin-top: 50px;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.link-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #aaa;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.link-item:hover {
+    color: #00bcd4; /* シアン系のアクセントカラー */
+}
+
+.footer-note {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.footer-disclaimer {
+    font-size: 0.75rem;
+    color: #444;
+}
