@@ -63,44 +63,71 @@ function render() {
     const container = document.getElementById('container');
     container.innerHTML = "";
 
-    Object.keys(groupedByMaterial).sort().forEach(name => {
-        const items = groupedByMaterial[name];
+    // itemMasterの全アイテム、またはレシピに登場する全アイテムを網羅
+    const allItemNames = new Set([
+        ...Object.keys(itemMaster),
+        ...allRecipes.map(r => r.material),
+        ...allRecipes.map(r => r.target)
+    ]);
+
+    Array.from(allItemNames).sort().forEach(name => {
+        const usageAsMaterial = groupedByMaterial[name] || []; // これを材料に作るもの（逆引き）
+        const craftRecipe = allRecipes.filter(r => r.target === name); // これを作るための材料（順引き）
+        
         const m = itemMaster[name] || {};
         const rar = m.rarity || 'common';
+
+        // 逆引きも順引きも存在しないアイテムはカードを表示しない（または必要に応じて調整）
+        if (usageAsMaterial.length === 0 && craftRecipe.length === 0 && !m.location) return;
 
         const card = document.createElement('div');
         card.className = 'card';
         card.setAttribute('data-name', name);
 
         card.innerHTML = `
-        <div class="card-header">
-            <div class="header-main">
+            <div class="card-header" onclick="quickSearch('${name.replace(/'/g, "\\'")}')">
                 <div class="rarity-label bg-${rar}">${rar}</div>
                 <div class="header-material-name">${name}</div>
-            </div>
-            <div class="header-acquisition">
-                ${(m.location && m.location.trim() !== "") ? `<div class="location-box">📍 入手: ${m.location}</div>` : ""}
-                ${(m.buy && m.buy !== "-" && m.buy.trim() !== "") ? `<div class="price-box">💰 購入: ${m.buy}</div>` : ""}
-            </div>
-        </div>
-        <div class="usage-list">
-            <div class="usage-title">この素材から作れるアイテム（逆引き）</div>
-            ${items.map(item => `
-            <div class="usage-item">
-                <span class="rarity-tag ${item.rarity}">${item.rarity.toUpperCase()}</span>
-                <div style="flex-grow:1">
-                    <div class="target-name" onclick="quickSearch('${item.target.replace(/'/g, "\\'")}')">
-                        ${item.target}
-                    </div>
-                    <div class="expand-button" onclick="toggleExpand(this, '${item.target.replace(/'/g, "\\'")}')">
-                        ▼ その他素材の詳細表示 ▼
-                    </div>
-                    <div class="recursive-area"></div>
+                <div class="header-info">
+                    <span>[ ${m.category || 'アイテム'} ]</span>
+                    ${m.buy && m.buy !== "-" ? `<span class="price-tag buy-price">購入: ${m.buy}</span>` : ""}
+                    ${m.sell && m.sell !== "-" ? `<span class="price-tag sell-price">売却: ${m.sell}</span>` : ""}
                 </div>
-                <div class="qty-area"><div class="qty-val">${item.qty}</div></div>
+                ${m.location ? `<div class="header-location">📍 入手方法: <b>${m.location}</b></div>` : ""}
             </div>
-            `).join('')}
-        </div>`;
+
+            ${craftRecipe.length > 0 ? `
+            <div class="usage-list" style="border-bottom: 1px solid #222; padding: 10px 20px; background: rgba(0, 255, 204, 0.05);">
+                <div class="expand-button" 
+                    style="margin-top: 0; display: block; text-align: left;" 
+                    onclick="toggleExpand(this, '${name.replace(/'/g, "\\'")}')">
+                    ▼ このアイテムの作成レシピを表示
+                </div>
+                <div class="recursive-area"></div>
+            </div>
+            ` : ""}
+
+            ${usageAsMaterial.length > 0 ? `
+            <div class="usage-list">
+                <div class="usage-title">この素材から作れるもの（逆引き）</div>
+                ${usageAsMaterial.map(item => `
+                    <div class="usage-item">
+                        <span class="rarity-tag ${item.rarity}">${item.rarity.toUpperCase()}</span>
+                        <div style="flex-grow:1">
+                            <div class="target-name" onclick="quickSearch('${item.target.replace(/'/g, "\\'")}')">
+                                ${item.target}
+                            </div>
+                            <div class="expand-button" onclick="toggleExpand(this, '${item.target.replace(/'/g, "\\'")}')">
+                                ▼ 詳細（${document.getElementById('deep-scan').checked ? '分解合計' : '材料'}）
+                            </div>
+                            <div class="recursive-area"></div>
+                        </div>
+                        <div class="qty-area"><div class="qty-val">${item.qty}</div></div>
+                    </div>
+                `).join('')}
+            </div>
+            ` : ""}
+        `;
         container.appendChild(card);
     });
 }
